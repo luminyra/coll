@@ -174,3 +174,53 @@ func TestSeqChunk(t *testing.T) {
 	}()
 	Of(1).Chunk(0)
 }
+
+type benchOrder struct {
+	id     int
+	amount int
+	paid   bool
+}
+
+func benchOrders() []benchOrder {
+	orders := make([]benchOrder, 10_000)
+	for i := range orders {
+		orders[i] = benchOrder{id: i, amount: i % 500, paid: i%3 != 0}
+	}
+	return orders
+}
+
+// sink keeps benchmark results alive, so the compiler cannot optimize the work
+// away or keep the result on the stack.
+var sink []int
+
+// The three benchmarks compute the same thing: the IDs of the first 100 paid
+// orders above 250 cents.
+func BenchmarkFirstPaidIDs(b *testing.B) {
+	orders := benchOrders()
+	isMatch := func(o benchOrder) bool { return o.paid && o.amount > 250 }
+	id := func(o benchOrder) int { return o.id }
+
+	b.Run("loop", func(b *testing.B) {
+		for b.Loop() {
+			ids := make([]int, 0, 100)
+			for _, o := range orders {
+				if isMatch(o) {
+					if ids = append(ids, o.id); len(ids) == 100 {
+						break
+					}
+				}
+			}
+			sink = ids
+		}
+	})
+	b.Run("seq", func(b *testing.B) {
+		for b.Loop() {
+			sink = From(orders).Filter(isMatch).Map(id).Take(100).Collect()
+		}
+	})
+	b.Run("eager", func(b *testing.B) {
+		for b.Loop() {
+			sink = Map(Filter(orders, isMatch), id)[:100]
+		}
+	})
+}

@@ -185,7 +185,9 @@ func (s Seq[T]) Chunk(size int) iter.Seq[[]T] {
 
 // Collect returns the values of s in a new slice.
 func (s Seq[T]) Collect() []T {
-	return slices.Collect(s.Iter())
+	// Start with room for a few values: most pipelines yield at least some,
+	// and growing from zero costs several small allocations.
+	return slices.AppendSeq(make([]T, 0, 8), s.Iter())
 }
 
 // Fold combines the values of s from left to right with f, starting from
