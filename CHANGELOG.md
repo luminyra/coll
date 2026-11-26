@@ -9,4 +9,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Lazy `Seq[T]` with chainable generic methods, eager slice helpers, set operations and map helpers.
+- `Seq.Collect` preallocates, cutting allocations for short results from 11 to 5 in `BenchmarkFirstPaidIDs`.
+- Benchmarks (`make bench`).
+- A Makefile with the development tasks (`make help`).
 - Requires Go 1.27 or later.
